@@ -69,19 +69,14 @@ bool Sentry::captureMessage(
     request << boost::network::header("X-Sentry-Auth", sentry_auth_header.str());
     request << boost::network::header("User-Agent", "sentry-cpp/1.0");
     request << boost::network::header("Content-Type", "application/json");
-    request << boost::network::header("Content-Encoding", "gzip");
 
-    /* Generate timestamp */
-    std::time_t now = std::time(NULL);
-    char timestamp[32];
-    std::strftime(timestamp, sizeof(timestamp),
-            "%Y-%m-%d %H:%M:%S", std::localtime(&now));
+    /*SK: FIXME:
+    request << boost::network::header("Content-Encoding", "gzip");
+    */
 
     /* Generate payload */
-    data["project_id"] = project_id;
     data["event_id"] = uuid4();
     data["culprit"] = title;
-    data["timestamp"] = timestamp;
     data["message"] = message;
     data["level"] = level;
     data["platform"] = "C++";
@@ -107,22 +102,29 @@ bool Sentry::captureMessage(
         data["server_name"] = server_name;
     }
 
-    std::cout << data.dump() << std::endl;
-    request << boost::network::body(data.dump());
-    std::cout << body(request) << std::endl;
-    http::client::response response = this->client->post(request);
-    /*for (auto& header : request.headers()) {
-        std::cout << header.first << ":" << header.second << std::endl;
-    }*/
-    std::cout << status(response) << std::endl;
-    std::cout << body(response) << std::endl;
+    char body_str_len[8];
+    sprintf(body_str_len, "%lu", data.dump().length());
+    request << boost::network::header("Content-Length", body_str_len);
+
+    http::client::response response = this->client->post(request, data.dump());
+    if (status(response) == HTTP_OK) {
+        return true;
+    }
+    else {
+        std::cout << status(response) << std::endl;
+        std::cout << body(response) << std::endl;
+        return false;
+    }
 }
 
 
 std::string Sentry::uuid4()
 {
     boost::uuids::uuid uuid = generator();
-    return to_string(uuid);
+    std::string str_uuid = to_string(uuid);
+    /* Remove '-' from the uuid. Sentry complains about max length */
+    boost::erase_all(str_uuid, "-");
+    return str_uuid;
 }
 
 
@@ -172,8 +174,9 @@ bool Sentry::info(const char* title, const char *message, void *extra)
 
 int main(void)
 {
-    Sentry s("https://57a3094fbaf7439f88e8cb879f033386:e83661341e25497eb0558a45090be4d5@app.getsentry.com/82534");
-    s.error("testaaaa");
-    s.error("wtfaaa");
+    Sentry s("https://3b218c1c711d4cf5b693717a4ae3c741:a41947bd4c18416f97190cda91ad6a83@sentry.io/104414");
+    //Sentry s("http://3b218c1c711d4cf5b693717a4ae3c741:a41947bd4c18416f97190cda91ad6a83@127.0.0.1/api/");
+    s.error("123testaaaa");
+    s.info("123wtfaaa");
     return 0;
 }

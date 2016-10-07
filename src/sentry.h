@@ -16,6 +16,13 @@
 
 namespace http = boost::network::http;
 
+
+enum HTTP_STATUS_CODES
+{
+    HTTP_OK = 200
+};
+
+
 class Sentry
 {
     private:
