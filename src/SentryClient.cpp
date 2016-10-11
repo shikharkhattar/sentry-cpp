@@ -39,6 +39,8 @@ SentryClient::~SentryClient()
 
 void SentryClient::parseDSN(std::string dsn)
 {
+    /* Format (as per API):
+     * '{PROTOCOL}://{PUBLIC_KEY}:{SECRET_KEY}@{HOST}/{PATH}{PROJECT_ID}' */
     std::string tmp_str;
 
     /* project_id */
