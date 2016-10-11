@@ -16,12 +16,12 @@ Wrote this in a day so it's not tested properly.
 1. Please see dependencies above.
 2. By default, cmake will look for dependencies in the usual places
 
-	$ git clone git@github.com:shikharkhattar/sentry-cpp.git
-	$ cd sentry-cpp
-	$ mkdir build
-	$ cd build
-	$ cmake ..
-	$ make
+    $ git clone git@github.com:shikharkhattar/sentry-cpp.git
+    $ cd sentry-cpp
+    $ mkdir build
+    $ cd build
+    $ cmake ..
+    $ make
 
 
 # Use it
@@ -39,4 +39,3 @@ but only the minimum required functionality is provided as of now.
 # License
 
 MIT License. Please see LICENSE
-
