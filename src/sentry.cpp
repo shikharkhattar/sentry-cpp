@@ -2,7 +2,6 @@
 
 /* TODO:
  * Exception handling
- * Extra Data dict
  * Async
  */
 
@@ -46,11 +45,7 @@ Sentry::~Sentry()
 }
 
 
-bool Sentry::captureMessage(
-        std::string title,
-        std::string message,
-        std::string level,
-        void* extra_data)
+bool Sentry::capture(SentryMessage& msg)
 {
 
     nlohmann::json data;
@@ -76,9 +71,9 @@ bool Sentry::captureMessage(
 
     /* Generate payload */
     data["event_id"] = uuid4();
-    data["culprit"] = title;
-    data["message"] = message;
-    data["level"] = level;
+    data["culprit"] = msg.getTitle();
+    data["message"] = msg.getMessage();
+    data["level"] = msg.getLevel();
     data["platform"] = "C++";
 
     /* System Information */
@@ -88,8 +83,10 @@ bool Sentry::captureMessage(
         data["server_name"] = server_name;
     }
 
+    data["extra"] = msg.getExtra();
     data["extra"]["backtrace"] = this->generateStackTrace();
 
+    /* Send the POST request */
     char body_str_len[8];
     sprintf(body_str_len, "%lu", data.dump().length());
     request << boost::network::header("Content-Length", body_str_len);
@@ -138,56 +135,19 @@ std::string Sentry::uuid4()
 }
 
 
-bool Sentry::error(const char *title, const char *message, void *extra)
-{
-    if (!message) {
-        return captureMessage(title, title, "error", extra);
-    }
-    else {
-        return captureMessage(title, message, "error", extra);
-    }
-}
-
-
-bool Sentry::warn(const char *title, const char *message, void *extra)
-{
-    if (!message) {
-        return captureMessage(title, title, "warn", extra);
-    }
-    else {
-        return captureMessage(title, message, "warn", extra);
-    }
-}
-
-
-bool Sentry::debug(const char* title, const char *message, void *extra)
-{
-    if (!message) {
-        return captureMessage(title, title, "debug", extra);
-    }
-    else {
-        return captureMessage(title, message, "debug", extra);
-    }
-}
-
-
-bool Sentry::info(const char* title, const char *message, void *extra)
-{
-    if (!message) {
-        return captureMessage(title, title,"info", extra);
-    }
-    else {
-        return captureMessage(title, message,"info", extra);
-    }
-}
-
-
 int main(void)
 {
     Sentry s("https://ba3860dad42246dfa851e18205e99232:b4d0113723ea440183cae69d30031251@sentry.io/104441");
-    //Sentry s("http://3b218c1c711d4cf5b693717a4ae3c741:a41947bd4c18416f97190cda91ad6a83@127.0.0.1/api/");
-    s.error("123testaaaa");
-    s.info("123wtfaaa");
+    SentryMessage msg_info("info test", "info");
+    SentryMessage msg_error("error test 2", "error");
+    std::vector<int> x = {0, 1, 2};
+    msg_error.add_extra("k1", 0);
+    msg_error.add_extra("k2", "asdf");
+    msg_error.add_extra("k3", x);
+
+    s.capture(msg_info);
+    s.capture(msg_error);
+
     std::cout << "Done" << std::endl;
     return 0;
 }
