@@ -5,6 +5,7 @@
 
 #include "json/json.hpp"
 
+
 class SentryMessage
 {
     private:
@@ -15,14 +16,7 @@ class SentryMessage
 
     public:
         /* Constructors */
-        SentryMessage(std::string _title, std::string _level) :
-            title(_title),
-            message(_title),
-            level(_level) {}
-
-        SentryMessage(std::string _title, std::string _message,
-                std::string _level) :
-            title(_title),
+        SentryMessage(std::string _message, std::string _level) :
             message(_message),
             level(_level) {}
 
@@ -31,20 +25,28 @@ class SentryMessage
         {
             return this->message;
         }
-        
+
         std::string getLevel()
         {
             return this->level;
         }
-        
+
         std::string getTitle()
         {
+            if (!this->title.length())
+                return this->message;
             return this->title;
         }
 
         nlohmann::json getExtra()
         {
             return this->extra;
+        }
+
+        /* Setters */
+        void setTitle(std::string _title)
+        {
+            this->title = _title;
         }
 
         /* to add extra data */

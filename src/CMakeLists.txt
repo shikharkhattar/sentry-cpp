@@ -8,12 +8,18 @@ endif()
 
 project(sentry-cpp CXX)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+# TODO: Need to explicitly include pthread due to a bug in netlib(0.12)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -g  -pthread")
 
-set ( CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ~/cpp-netlib-build )
-find_package ( cppnetlib 0.11.0 REQUIRED )
-include_directories ( ${CPPNETLIB_INCLUDE_DIRS} )
+find_package (cppnetlib 0.11.0 REQUIRED)
+include_directories (
+    SYSTEM
+    ${CPPNETLIB_INCLUDE_DIRS}
+    ../include
+    )
 
-add_executable(sentry-cpp sentry.cpp)
-#target_link_libraries(sentry-cpp curl ${CPPNETLIB_LIBRARIES})
-target_link_libraries(sentry-cpp ${CPPNETLIB_LIBRARIES})
+ADD_LIBRARY(sentryclient STATIC
+    SentryClient.cpp
+    )
+
+target_link_libraries(sentryclient ${CPPNETLIB_LIBRARIES})

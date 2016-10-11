@@ -1,54 +1,74 @@
-#include "sentry.h"
+#include "SentryClient.h"
 
 /* TODO:
  * Exception handling
  * Async
+ * HTTPS
+ * Header only implementation
  */
 
 
-Sentry::Sentry(std::string dsn, int _timeout)
+SentryClient::SentryClient(std::string dsn, int _timeout)
 {
-    /* project_id */
+    if (!dsn.length()) {
+        /* Empty DSN. Disable client (as per docs) */
+        this->disabled = true;
+    }
+    else {
+        this->disabled = false;
+
+        /* parse DSN */
+        this->parseDSN(dsn);
+
+        /* Setup http client */
+        this->options.follow_redirects(true)
+            .cache_resolved(true)
+            .timeout(_timeout);
+
+        this->client = new http::client(options);
+    }
+}
+
+
+SentryClient::~SentryClient()
+{
+    if (this->client)
+        delete this->client;
+}
+
+
+void SentryClient::parseDSN(std::string dsn)
+{
     std::string tmp_str;
 
+    /* project_id */
     unsigned found = dsn.find_last_of("/");
     this->project_id = dsn.substr(found + 1);
     tmp_str = dsn.substr(0, found);
 
     /* url */
     found = dsn.find_last_of("@");
+    /* TODO: FIXME (https) */
     this->url = "http://";
     this->url = this->url.append(tmp_str.substr(found + 1));
     this->url = this->url.append("/api/");
     this->url = this->url.append(project_id);
     this->url = this->url.append("/store/");
 
-    /* public and key */
+    /* public and secret key */
     tmp_str = dsn.substr(0, found);
     found = tmp_str.find_first_of("//");
     std::string key = tmp_str.substr(found + 2);
     found = key.find_last_of(":");
     this->public_key = key.substr(0, found);
     this->secret_key = key.substr(found + 1);
-
-    this->options.follow_redirects(true)
-        .cache_resolved(true)
-        .timeout(_timeout);
-
-    this->client = new http::client(options);
 }
 
 
-Sentry::~Sentry()
+bool SentryClient::capture(SentryMessage& msg)
 {
-    delete this->client;
-}
-
-
-bool Sentry::capture(SentryMessage& msg)
-{
-
-    nlohmann::json data;
+    if (this->disabled)
+        return true;
 
     http::client::request request(this->url);
 
@@ -61,15 +81,17 @@ bool Sentry::capture(SentryMessage& msg)
         << ", sentry_secret=" << this->secret_key
         << ", sentry_client=sentry-cpp/1.0";
 
-    request << boost::network::header("X-Sentry-Auth", sentry_auth_header.str());
-    request << boost::network::header("User-Agent", "sentry-cpp/1.0");
-    request << boost::network::header("Content-Type", "application/json");
+    request << network::header("X-Sentry-Auth", sentry_auth_header.str());
+    request << network::header("User-Agent", "sentry-cpp/1.0");
+    request << network::header("Content-Type", "application/json");
 
     /*SK: TODO:FIXME:
-     * request << boost::network::header("Content-Encoding", "gzip");
+     * request << network::header("Content-Encoding", "gzip");
      * */
 
     /* Generate payload */
+    nlohmann::json data;
+
     data["event_id"] = uuid4();
     data["culprit"] = msg.getTitle();
     data["message"] = msg.getMessage();
@@ -83,19 +105,22 @@ bool Sentry::capture(SentryMessage& msg)
         data["server_name"] = server_name;
     }
 
+    /* Get extra data (if any) added by the user */
     data["extra"] = msg.getExtra();
+    /* Add stacktrace to extra data */
     data["extra"]["backtrace"] = this->generateStackTrace();
 
     /* Send the POST request */
     char body_str_len[8];
     sprintf(body_str_len, "%lu", data.dump().length());
-    request << boost::network::header("Content-Length", body_str_len);
+    request << network::header("Content-Length", body_str_len);
 
     http::client::response response = this->client->post(request, data.dump());
     if (status(response) == HTTP_OK) {
         return true;
     }
     else {
+        std::cout << "Error while sending payload to sentry" << std::endl;
         std::cout << status(response) << std::endl;
         std::cout << body(response) << std::endl;
         return false;
@@ -103,7 +128,7 @@ bool Sentry::capture(SentryMessage& msg)
 }
 
 /* https://linux.die.net/man/3/backtrace */
-nlohmann::json Sentry::generateStackTrace(uint32_t size)
+nlohmann::json SentryClient::generateStackTrace(uint32_t size)
 {
     int nptrs;
     void *buffer[size];
@@ -125,29 +150,15 @@ nlohmann::json Sentry::generateStackTrace(uint32_t size)
 }
 
 
-std::string Sentry::uuid4()
+std::string SentryClient::uuid4()
 {
     boost::uuids::uuid uuid = generator();
     std::string str_uuid = to_string(uuid);
+
     /* Remove '-' from the uuid. Sentry complains about max length */
     boost::erase_all(str_uuid, "-");
     return str_uuid;
 }
 
 
-int main(void)
-{
-    Sentry s("https://ba3860dad42246dfa851e18205e99232:b4d0113723ea440183cae69d30031251@sentry.io/104441");
-    SentryMessage msg_info("info test", "info");
-    SentryMessage msg_error("error test 2", "error");
-    std::vector<int> x = {0, 1, 2};
-    msg_error.add_extra("k1", 0);
-    msg_error.add_extra("k2", "asdf");
-    msg_error.add_extra("k3", x);
 
-    s.capture(msg_info);
-    s.capture(msg_error);
-
-    std::cout << "Done" << std::endl;
-    return 0;
-}
