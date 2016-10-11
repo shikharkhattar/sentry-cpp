@@ -2,7 +2,10 @@
 
 int main(void)
 {
-    SentryClient s("https://ba3860dad42246dfa851e18205e99232:b4d0113723ea440183cae69d30031251@sentry.io/104441");
+    /* Format (as per API):
+     * '{PROTOCOL}://{PUBLIC_KEY}:{SECRET_KEY}@{HOST}/{PATH}{PROJECT_ID}'
+     * */
+    SentryClient s("https://*****:******@sentry.io/****");
     SentryMessage msg_info("info test", "info");
     SentryMessage msg_error("error test 2", "error");
     std::vector<int> x = {0, 1, 2};
