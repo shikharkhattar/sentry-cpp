@@ -43,6 +43,7 @@ void SentryClient::parseDSN(std::string dsn)
      * '{PROTOCOL}://{PUBLIC_KEY}:{SECRET_KEY}@{HOST}/{PATH}{PROJECT_ID}' */
     std::string tmp_str;
 
+    /* TODO: check / validate dsn */
     /* project_id */
     unsigned found = dsn.find_last_of("/");
     this->project_id = dsn.substr(found + 1);
