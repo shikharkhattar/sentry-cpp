@@ -5,8 +5,7 @@
 #include <string>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sstream>
-#include <ctime>
+#include <execinfo.h>
 
 #include "json/json.hpp"
 #include <boost/uuid/uuid.hpp>
@@ -23,6 +22,8 @@ enum HTTP_STATUS_CODES
 };
 
 
+const int STACK_SIZE = 10;
+
 class Sentry
 {
     private:
@@ -36,21 +37,18 @@ class Sentry
 
         std::string uuid4();
 
+        nlohmann::json generateStackTrace(uint32_t size = STACK_SIZE);
+
         bool captureMessage(std::string,
                 std::string,
                 std::string,
                 void* extra_data = NULL);
 
-        const char *_file;
-        int _line;
-        const char *_function;
-        const char *_function_header;
-
         boost::uuids::random_generator generator;
-        
+
         http::client* client;
         http::client::options options;
-    
+
     public:
         Sentry(std::string, int _timeout = 2);
 

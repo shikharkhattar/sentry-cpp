@@ -2,8 +2,8 @@
 
 /* TODO:
  * Exception handling
- * Stack Trace
  * Extra Data dict
+ * Async
  */
 
 
@@ -61,18 +61,18 @@ bool Sentry::captureMessage(
     std::stringstream sentry_auth_header;
 
     sentry_auth_header << "Sentry sentry_version=7"
-                       << ", sentry_timestamp=" << time(NULL)
-                       << ", sentry_key=" << this->public_key
-                       << ", sentry_secret=" << this->secret_key
-                       << ", sentry_client=sentry-cpp/1.0";
+        << ", sentry_timestamp=" << time(NULL)
+        << ", sentry_key=" << this->public_key
+        << ", sentry_secret=" << this->secret_key
+        << ", sentry_client=sentry-cpp/1.0";
 
     request << boost::network::header("X-Sentry-Auth", sentry_auth_header.str());
     request << boost::network::header("User-Agent", "sentry-cpp/1.0");
     request << boost::network::header("Content-Type", "application/json");
 
-    /*SK: FIXME:
-    request << boost::network::header("Content-Encoding", "gzip");
-    */
+    /*SK: TODO:FIXME:
+     * request << boost::network::header("Content-Encoding", "gzip");
+     * */
 
     /* Generate payload */
     data["event_id"] = uuid4();
@@ -81,26 +81,14 @@ bool Sentry::captureMessage(
     data["level"] = level;
     data["platform"] = "C++";
 
-    //SK: FIXME
-    /*
-    nlohmann::json extra_val;
-    if (extra_data  {
-        extra_val = *(static_cast<nlohmann::json *>(extra_data));
-    }
-
-    extra_val["current file"] = _file;
-    extra_val["current line"] = _line;
-    extra_val["current function"] = _function;
-    extra_val["current function declare"] = _function_header;
-    data["extra"] = extra_val;
-    */
-
     /* System Information */
     char server_name[50];
     int retval = gethostname(server_name, sizeof(server_name));
     if (!retval) {
         data["server_name"] = server_name;
     }
+
+    data["extra"]["backtrace"] = this->generateStackTrace();
 
     char body_str_len[8];
     sprintf(body_str_len, "%lu", data.dump().length());
@@ -115,6 +103,28 @@ bool Sentry::captureMessage(
         std::cout << body(response) << std::endl;
         return false;
     }
+}
+
+/* https://linux.die.net/man/3/backtrace */
+nlohmann::json Sentry::generateStackTrace(uint32_t size)
+{
+    int nptrs;
+    void *buffer[size];
+    char **strings;
+    nlohmann::json bt;
+
+    nptrs = backtrace(buffer, size);
+    strings = backtrace_symbols(buffer, nptrs);
+    if (!strings) {
+        return bt;
+    }
+
+    for (int j = 0; j < nptrs; j++) {
+        bt.push_back(strings[j]);
+    }
+
+    free(strings);
+    return bt;
 }
 
 
@@ -174,9 +184,10 @@ bool Sentry::info(const char* title, const char *message, void *extra)
 
 int main(void)
 {
-    Sentry s("https://3b218c1c711d4cf5b693717a4ae3c741:a41947bd4c18416f97190cda91ad6a83@sentry.io/104414");
+    Sentry s("https://ba3860dad42246dfa851e18205e99232:b4d0113723ea440183cae69d30031251@sentry.io/104441");
     //Sentry s("http://3b218c1c711d4cf5b693717a4ae3c741:a41947bd4c18416f97190cda91ad6a83@127.0.0.1/api/");
     s.error("123testaaaa");
     s.info("123wtfaaa");
+    std::cout << "Done" << std::endl;
     return 0;
 }
