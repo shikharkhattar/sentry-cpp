@@ -23,3 +23,6 @@ ADD_LIBRARY(sentryclient STATIC
     )
 
 target_link_libraries(sentryclient ${CPPNETLIB_LIBRARIES})
+
+install (TARGETS sentryclient DESTINATION lib)
+install (FILES ../include/SentryClient.h ../include/SentryMessage.h DESTINATION include/sentryclient)
