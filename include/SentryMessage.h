@@ -16,6 +16,13 @@ class SentryMessage
 
     public:
         /* Constructors */
+
+        /* Level can be one of the following (as per Sentry API)
+         * "info"
+         * "debug"
+         * "warn"
+         * "error"
+         */
         SentryMessage(std::string _message, std::string _level) :
             message(_message),
             level(_level) {}

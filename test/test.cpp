@@ -6,8 +6,16 @@ int main(void)
      * '{PROTOCOL}://{PUBLIC_KEY}:{SECRET_KEY}@{HOST}/{PATH}{PROJECT_ID}'
      * */
     SentryClient s("https://*****:******@sentry.io/****");
+    
+    /* Level can be one of the following (as per Sentry API)
+     * "info"
+     * "debug"
+     * "warn"
+     * "error"
+     */
     SentryMessage msg_info("info test", "info");
     SentryMessage msg_error("error test 2", "error");
+    
     std::vector<int> x = {0, 1, 2};
     msg_error.add_extra("k1", 0);
     msg_error.add_extra("k2", "asdf");
