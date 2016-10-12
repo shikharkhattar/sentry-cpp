@@ -8,6 +8,4 @@ enum HTTP_STATUS_CODES
     HTTP_INTERNAL_SERVER_ERROR = 500
 };
 
-const int STACK_SIZE = 10;
-
 #endif
