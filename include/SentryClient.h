@@ -33,6 +33,8 @@ namespace network = boost::network;
     (client).capture((msg));                                 \
 } while (0)
 
+const uint32_t STACK_SIZE = 10;
+
 
 class SentryClient
 {
