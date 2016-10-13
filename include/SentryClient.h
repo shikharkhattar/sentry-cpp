@@ -15,8 +15,15 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/network/protocol/http/client.hpp>
 
-#include "types.h"
 #include "SentryMessage.h"
+
+
+enum HTTP_STATUS_CODES
+{
+    HTTP_OK = 200,
+    HTTP_BAD_REQUEST = 400,
+    HTTP_INTERNAL_SERVER_ERROR = 500
+};
 
 namespace http = boost::network::http;
 namespace network = boost::network;
