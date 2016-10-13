@@ -32,8 +32,8 @@ SentryClient::SentryClient(std::string dsn, int _timeout)
 
 SentryClient::~SentryClient()
 {
-    if (this->client)
-        delete this->client;
+    delete this->client;
+    this->client = NULL;
 }
 
 
