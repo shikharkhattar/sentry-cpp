@@ -8,13 +8,15 @@ Wrote this in a day so it's not tested properly.
 # Dependencies:
 
 1. CPP-Netlib (http://cpp-netlib.org/)
-2. JSON from Modern (C++) (https://github.com/nlohmann/json)
+2. JSON for Modern C++ (https://github.com/nlohmann/json)
 
 
 # Compilation:
 
 1. Please see dependencies above.
-2. By default, cmake will look for dependencies in the usual places
+2. This is a header only library so no need to build anything. Just include
+   "sentry.hpp" and link the dependencies with your executable / library.
+3. To build the test:
 
     > git clone git@github.com:shikharkhattar/sentry-cpp.git  
     > cd sentry-cpp  
@@ -26,7 +28,7 @@ Wrote this in a day so it's not tested properly.
 
 # Use it
 
-See test/test.cpp
+See test/test.cpp (Change the Sentry DSN)
 
 
 # Notes:
