@@ -1,14 +1,17 @@
-#include "SentryClient.h"
+#ifndef __SENTRYCLIENT_IMPL_H_
+#define __SENTRYCLIENT_IMPL_H_
+
+#include "sentry_client.hpp"
 
 /* TODO:
  * Exception handling
  * Async
  * HTTPS
- * Header only implementation
  */
 
+using namespace sentry;
 
-SentryClient::SentryClient(std::string dsn, int _timeout)
+inline SentryClient::SentryClient(std::string dsn, int _timeout)
 {
     if (!dsn.length()) {
         /* Empty DSN. Disable client (as per docs) */
@@ -30,14 +33,14 @@ SentryClient::SentryClient(std::string dsn, int _timeout)
 }
 
 
-SentryClient::~SentryClient()
+inline SentryClient::~SentryClient()
 {
     delete this->client;
     this->client = NULL;
 }
 
 
-void SentryClient::parseDSN(std::string dsn)
+inline void SentryClient::parseDSN(std::string dsn)
 {
     /* Format (as per API):
      * '{PROTOCOL}://{PUBLIC_KEY}:{SECRET_KEY}@{HOST}/{PATH}{PROJECT_ID}' */
@@ -68,7 +71,7 @@ void SentryClient::parseDSN(std::string dsn)
 }
 
 
-bool SentryClient::capture(SentryMessage& msg)
+inline bool SentryClient::capture(SentryMessage& msg)
 {
     if (this->disabled)
         return true;
@@ -131,7 +134,7 @@ bool SentryClient::capture(SentryMessage& msg)
 }
 
 /* https://linux.die.net/man/3/backtrace */
-nlohmann::json SentryClient::generateStackTrace(uint32_t size)
+inline nlohmann::json SentryClient::generateStackTrace(uint32_t size)
 {
     int nptrs;
     void *buffer[size];
@@ -153,7 +156,7 @@ nlohmann::json SentryClient::generateStackTrace(uint32_t size)
 }
 
 
-std::string SentryClient::uuid4()
+inline std::string SentryClient::uuid4()
 {
     boost::uuids::uuid uuid = generator();
     std::string str_uuid = to_string(uuid);
@@ -163,5 +166,4 @@ std::string SentryClient::uuid4()
     return str_uuid;
 }
 
-
-
+#endif
