@@ -8,17 +8,15 @@
 #include <iostream>
 #include <string>
 #include <execinfo.h>
+#include <exception>
 
 #include "json/json.hpp"
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
 #include <boost/network/protocol/http/client.hpp>
 
 #include "sentry_message.hpp"
 
 /* SK: don't like this ... look for an alternative
- * problem is to capture file, line and function info 
+ * problem is to capture file, line and function info
  * which is not trivial with a function call */
 #define CAPTURE_MESSAGE(client, msg) do {                    \
     char source_file[64];                                    \
@@ -37,7 +35,6 @@ namespace sentry {
         HTTP_INTERNAL_SERVER_ERROR = 500
     };
 
-
     const uint32_t STACK_SIZE = 10;
 
     namespace http = boost::network::http;
@@ -46,8 +43,6 @@ namespace sentry {
     class SentryClient
     {
         private:
-            /* Function to generate unique id */
-            std::string uuid4();
 
             /* Function to generate stacktrace */
             nlohmann::json generateStackTrace(uint32_t size = STACK_SIZE);
@@ -60,19 +55,18 @@ namespace sentry {
             std::string secret_key;
             std::string project_id;
 
-            boost::uuids::random_generator generator;
-
-            http::client* client;
             http::client::options options;
 
             bool disabled;
 
         public:
-            SentryClient(std::string, int _timeout = 5);
+            SentryClient(std::string, int _timeout = 10);
 
             ~SentryClient();
 
             bool capture(SentryMessage& msg);
+
+            bool is_active();
     };
 }
 

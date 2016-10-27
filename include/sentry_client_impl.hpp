@@ -4,7 +4,6 @@
 #include "sentry_client.hpp"
 
 /* TODO:
- * Exception handling
  * Async
  * HTTPS
  */
@@ -27,17 +26,12 @@ inline SentryClient::SentryClient(std::string dsn, int _timeout)
         this->options.follow_redirects(true)
             .cache_resolved(true)
             .timeout(_timeout);
-
-        this->client = new http::client(options);
     }
 }
 
 
 inline SentryClient::~SentryClient()
-{
-    delete this->client;
-    this->client = NULL;
-}
+{}
 
 
 inline void SentryClient::parseDSN(std::string dsn)
@@ -76,59 +70,70 @@ inline bool SentryClient::capture(SentryMessage& msg)
     if (this->disabled)
         return true;
 
-    http::client::request request(this->url);
+    try {
+        http::client::request request(this->url);
 
-    /* Request headers */
-    std::stringstream sentry_auth_header;
+        /* Request headers */
+        std::stringstream sentry_auth_header;
 
-    sentry_auth_header << "Sentry sentry_version=7"
-        << ", sentry_timestamp=" << time(NULL)
-        << ", sentry_key=" << this->public_key
-        << ", sentry_secret=" << this->secret_key
-        << ", sentry_client=sentry-cpp/1.0";
+        sentry_auth_header << "Sentry sentry_version=7"
+            << ", sentry_timestamp=" << time(NULL)
+            << ", sentry_key=" << this->public_key
+            << ", sentry_secret=" << this->secret_key
+            << ", sentry_client=sentry-cpp/1.0";
 
-    request << network::header("X-Sentry-Auth", sentry_auth_header.str());
-    request << network::header("User-Agent", "sentry-cpp/1.0");
-    request << network::header("Content-Type", "application/json");
+        request << network::header("X-Sentry-Auth", sentry_auth_header.str());
+        request << network::header("User-Agent", "sentry-cpp/1.0");
+        request << network::header("Content-Type", "application/json");
 
-    /*SK: TODO:FIXME:
-     * request << network::header("Content-Encoding", "gzip");
-     * */
+        /*SK: TODO:FIXME:
+         * request << network::header("Content-Encoding", "gzip");
+         * */
 
-    /* Generate payload */
-    nlohmann::json data;
+        /* Generate payload */
+        nlohmann::json data;
 
-    data["event_id"] = uuid4();
-    data["culprit"] = msg.getTitle();
-    data["message"] = msg.getMessage();
-    data["level"] = msg.getLevel();
-    data["platform"] = "C++";
+        data["event_id"] = msg.getID();
+        data["culprit"] = msg.getTitle();
+        data["message"] = msg.getMessage();
+        data["level"] = msg.getLevel();
+        data["platform"] = "C++";
 
-    /* System Information */
-    char server_name[50];
-    int retval = gethostname(server_name, sizeof(server_name));
-    if (!retval) {
-        data["server_name"] = server_name;
+        /* System Information */
+        char server_name[50];
+        int retval = gethostname(server_name, sizeof(server_name));
+        if (!retval) {
+            data["server_name"] = server_name;
+        }
+
+        /* Get extra data (if any) added by the user */
+        data["extra"] = msg.getExtra();
+        /* Add stacktrace to extra data */
+        data["extra"]["backtrace"] = this->generateStackTrace();
+
+        /* Send the POST request */
+        char body_str_len[8];
+        sprintf(body_str_len, "%lu", data.dump().length());
+        request << network::header("Content-Length", body_str_len);
+
+        /* Using a local variable because using a shared_ptr (as object variable)
+         * led to race conditions and segfaults
+         */
+        http::client client(this->options);
+        http::client::response response = client.post(request, data.dump());
+        if (status(response) == HTTP_OK) {
+            return true;
+        }
+        else {
+            std::cout << "Error while sending payload to sentry" << std::endl;
+            std::cout << status(response) << std::endl;
+            std::cout << body(response) << std::endl;
+            return false;
+        }
     }
-
-    /* Get extra data (if any) added by the user */
-    data["extra"] = msg.getExtra();
-    /* Add stacktrace to extra data */
-    data["extra"]["backtrace"] = this->generateStackTrace();
-
-    /* Send the POST request */
-    char body_str_len[8];
-    sprintf(body_str_len, "%lu", data.dump().length());
-    request << network::header("Content-Length", body_str_len);
-
-    http::client::response response = this->client->post(request, data.dump());
-    if (status(response) == HTTP_OK) {
-        return true;
-    }
-    else {
-        std::cout << "Error while sending payload to sentry" << std::endl;
-        std::cout << status(response) << std::endl;
-        std::cout << body(response) << std::endl;
+    catch (const std::exception& e) {
+        std::cout << "Exception thrown while pushing to sentry:" <<
+            e.what() << std::endl;
         return false;
     }
 }
@@ -155,15 +160,9 @@ inline nlohmann::json SentryClient::generateStackTrace(uint32_t size)
     return bt;
 }
 
-
-inline std::string SentryClient::uuid4()
+inline bool SentryClient::is_active()
 {
-    boost::uuids::uuid uuid = generator();
-    std::string str_uuid = to_string(uuid);
-
-    /* Remove '-' from the uuid. Sentry complains about max length */
-    boost::erase_all(str_uuid, "-");
-    return str_uuid;
+    return !(this->disabled);
 }
 
 #endif
