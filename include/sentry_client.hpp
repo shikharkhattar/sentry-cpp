@@ -11,6 +11,10 @@
 #include <exception>
 
 #include "json/json.hpp"
+
+#ifndef BOOST_NETWORK_ENABLE_HTTPS
+#define BOOST_NETWORK_ENABLE_HTTPS
+#endif
 #include <boost/network/protocol/http/client.hpp>
 
 #include "sentry_message.hpp"

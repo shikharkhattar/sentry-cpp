@@ -5,7 +5,6 @@
 
 /* TODO:
  * Async
- * HTTPS
  */
 
 using namespace sentry;
@@ -48,8 +47,7 @@ inline void SentryClient::parseDSN(std::string dsn)
 
     /* url */
     found = dsn.find_last_of("@");
-    /* TODO: FIXME (https) */
-    this->url = "http://";
+    this->url = "https://";
     this->url = this->url.append(tmp_str.substr(found + 1));
     this->url = this->url.append("/api/");
     this->url = this->url.append(project_id);
